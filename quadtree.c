@@ -1,13 +1,14 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<time.h>
 
 typedef struct _quadTree * Position;
 typedef struct _node * NodePosition;
 
 //Struct point represents point in the space, it has x and y coordinates
 typedef struct _point{
-  int x;
-  int y;
+  float x;
+  float y;
 }Point;
 
 typedef struct _node{
@@ -29,12 +30,12 @@ typedef struct _quadTree{
   int divided;
 }QuadTree;
 
-int push(NodePosition node, int x, int y);
+int push(NodePosition node, float x, float y);
 int printList(NodePosition node);
 int listSize(NodePosition node);
 int freeList(NodePosition node);
 Position createTree(int capacity, Point start, Point end);
-int insert(Position point, int x, int y);
+int insert(Position point, float x, float y);
 int printTree(Position point);
 int divide(Position point);
 
@@ -42,12 +43,8 @@ int main(){
   Point start, end;
   start.x = 0; start.y = 0; end.x = 10; end.y = 10;
   Position tree = createTree(5, start, end);
-  insert(tree, 6, 6);
-  insert(tree, 7, 7);
-  insert(tree, 2, 6);
-  insert(tree, 1, 1);
-  insert(tree, 6, 2);
-  insert(tree, 2, 2);
+  
+
   printTree(tree);
 
   return 0;
@@ -75,36 +72,30 @@ Position createTree(int capacity, Point start, Point end){
   return temp;
 }
 
-int insert(Position point, int x, int y){
+int insert(Position point, float x, float y){
+  if(x >= point->end.x || x < point->start.x || y >= point->end.y || y < point->start.y)
+    return 1;
+  
   if(listSize(point->points) < point->capacity && point->divided == 0){
     push(point->points, x, y);
+    return 0;
   }
-  
-  else{
-    int width = point->end.x - point->start.x;
-    int height = point->end.y - point->start.y;
+
+  if(!point->divided)
     divide(point);
 
-    if(x <= width / 2){
-      if(y <= height / 2)
-        insert(point->third, x, y);
-      else
-        insert(point->second, x, y);
-    }
-    else{
-      if(y <= height / 2)
-        insert(point->fourth, x, y);
-      else
-        insert(point->first, x, y);
-    }
-  }
+  insert(point->first, x, y);
+  insert(point->second, x, y);
+  insert(point->third, x, y);
+  insert(point->fourth, x, y);
   
+  return 0;
 }
 
 //Creates subdivisions of a tree and inserts all points into its quadrant
 int divide(Position tree){
-  int width = tree->end.x - tree->start.x;
-  int height = tree->end.y - tree->start.y;
+  float width = tree->end.x - tree->start.x;
+  float height = tree->end.y - tree->start.y;
   
   //Points that will help create subdivisions of a tree
   Point middleLeft, center, middleBottom, middleTop, middleRight;
@@ -122,20 +113,14 @@ int divide(Position tree){
   NodePosition temp = tree->points->next;
 
   while(temp != NULL){
-    int tempX = temp->point.x;
-    int tempY = temp->point.y;
-    if(tempX <= width / 2){
-      if(tempY <= height / 2)
-        insert(tree->third, tempX, tempY);
-      else
-        insert(tree->second, tempX, tempY);
-    }
-    else{
-      if(tempY <= height / 2)
-        insert(tree->fourth, tempX, tempY);
-      else
-        insert(tree->first, tempX, tempY);
-    }
+    float tempX = temp->point.x;
+    float tempY = temp->point.y;
+    
+    insert(tree->first, tempX, tempY);
+    insert(tree->second, tempX, tempY);
+    insert(tree->third, tempX, tempY);
+    insert(tree->fourth, tempX, tempY);
+
     temp = temp->next;
   }
 
@@ -148,7 +133,7 @@ int divide(Position tree){
 }
 
 //Push a point into the list
-int push(NodePosition node, int x, int y){
+int push(NodePosition node, float x, float y){
   NodePosition temp = (NodePosition)malloc(sizeof(Node));
   if(temp == NULL){
     return 1;
@@ -169,8 +154,11 @@ int push(NodePosition node, int x, int y){
 
 //Print list of points
 int printList(NodePosition node){
+  if(node == NULL){
+    return 1;
+  }
   while(node != NULL){
-    printf("%d %d\n", node->point.x, node->point.y);
+    printf("%.0f %.0f\n", node->point.x, node->point.y);
     node = node->next;
   }
   return 0;
@@ -186,6 +174,7 @@ int listSize(NodePosition node){
   return size;
 }
 
+//Deletes list
 int freeList(NodePosition node){
   NodePosition temp = NULL;
   while(node != NULL){
@@ -196,18 +185,24 @@ int freeList(NodePosition node){
   return 0;
 }
 
+
+//Prints tree
 int printTree(Position point){
   if(point == NULL){
     return 1;
   }
 
-  printf("\n");
-  printList(point->points->next);
+  if(point->divided == 0){
+    printf("\n");
+    printList(point->points->next);
+  }
 
-  printTree(point->first);
-  printTree(point->second);
-  printTree(point->third);
-  printTree(point->fourth);
+  else{
+    printTree(point->first);
+    printTree(point->second);
+    printTree(point->third);
+    printTree(point->fourth);
+  }
 
   return 0;
 }
