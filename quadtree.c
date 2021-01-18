@@ -1,62 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include<time.h>
-
-typedef struct _quadTree * Position;
-
-//Struct point represents point in the space, it has x and y coordinates
-typedef struct _point{
-  float x;
-  float y;
-}Point;
-
-/*Struct quadtree represents space, and its subdivisions. It has array of points in space, start and end which define boundaries of the space, 
-capacity, and first, second, etc. which are subdivisions. If tree has more points that capacity it creates 4 subdivisions.*/
-typedef struct _quadTree{
-  Point * points;
-  Point start;
-  Point end;
-  int capacity;
-  int counter;
-  Position first;
-  Position second;
-  Position third;
-  Position fourth;
-  int divided;
-}QuadTree;
-
-Position createTree(int capacity, Point start, Point end);
-int insert(Position point, float x, float y);
-int printTree(Position point);
-int divide(Position point);
-int findPoint(Position point, float x, float y);
-
-int main(){
-  Point start, end;
-  start.x = 0; start.y = 0; end.x = 100; end.y = 100;
-  Position tree = createTree(5, start, end);
-  
-  srand(time(0));
-
-  int i = 0;
-  float a, b;
-
-  for(i = 0; i < 30; i++){
-    int upper = 100;
-    int lower = 0;
-    int tempX = (rand() % (upper-lower+1))+ lower;
-    int tempY= (rand() % (upper-lower+1))+ lower;
-    insert(tree, tempX, tempY);
-  }
-
-  printTree(tree);
-
-  printf("Unesite trazenu tocku:\n");
-  scanf(" %f %f", &a, &b);
-  findPoint(tree, a, b);
-  
-  return 0;
-}
+#include<math.h>
+#include "quadtree.h"
 
 //Creates tree node, initialize points list, sets all subdivision to null
 Position createTree(int capacity, Point start, Point end){
@@ -81,25 +26,25 @@ Position createTree(int capacity, Point start, Point end){
 }
 
 //Inserts points into tree
-int insert(Position point, float x, float y){
-  if(x >= point->end.x || x < point->start.x || y >= point->end.y || y < point->start.y)
+int insert(Position node, float x, float y, float radius){
+  if(x >= node->end.x || x < node->start.x || y >= node->end.y || y < node->start.y)
     return 1;
   
-  if(point->counter < point->capacity && point->divided == 0){
+  if(node->counter < node->capacity && node->divided == 0){
     Point temp;
-    temp.x = x; temp.y = y;
-    point->points[point->counter] = temp;
-    point->counter++;
+    temp.x = x; temp.y = y; temp.radius = radius;
+    node->points[node->counter] = temp;
+    node->counter++;
     return 0;
   }
 
-  if(!point->divided)
-    divide(point);
+  if(!node->divided)
+    divide(node);
 
-  insert(point->first, x, y);
-  insert(point->second, x, y);
-  insert(point->third, x, y);
-  insert(point->fourth, x, y);
+  insert(node->first, x, y, radius);
+  insert(node->second, x, y, radius);
+  insert(node->third, x, y, radius);
+  insert(node->fourth, x, y, radius);
   
   return 0;
 }
@@ -125,10 +70,10 @@ int divide(Position tree){
   int i = 0;
 
   for(i = 0; i < tree->capacity; i++){
-    insert(tree->first, tree->points[i].x, tree->points[i].y);
-    insert(tree->second, tree->points[i].x, tree->points[i].y);
-    insert(tree->third, tree->points[i].x, tree->points[i].y);
-    insert(tree->fourth, tree->points[i].x, tree->points[i].y);
+    insert(tree->first, tree->points[i].x, tree->points[i].y, tree->points[i].radius);
+    insert(tree->second, tree->points[i].x, tree->points[i].y, tree->points[i].radius);
+    insert(tree->third, tree->points[i].x, tree->points[i].y, tree->points[i].radius);
+    insert(tree->fourth, tree->points[i].x, tree->points[i].y, tree->points[i].radius);
   }
 
   free(tree->points);
@@ -139,63 +84,81 @@ int divide(Position tree){
 }
 
 //Prints tree
-int printTree(Position point){
+int printTree(Position node){
   int i = 0;
-  if(point == NULL){
+  if(node == NULL){
     return 1;
   }
 
-  if(point->divided == 0){
+  if(node->divided == 0){
     printf("\n");
-    for(i = 0; i < point->counter; i++){
-      printf("%.0f %.0f\n", point->points[i].x, point->points[i].y);
+    for(i = 0; i < node->counter; i++){
+      printf("%.0f %.0f\n", node->points[i].x, node->points[i].y);
     }
   }
 
   else{
-    printTree(point->first);
-    printTree(point->second);
-    printTree(point->third);
-    printTree(point->fourth);
+    printTree(node->first);
+    printTree(node->second);
+    printTree(node->third);
+    printTree(node->fourth);
   }
 
   return 0;
 }
 
-int findPoint(Position point, float x, float y){
-  if(point == NULL){
-    return 1;
+//Find nearest points and prints them out
+Position findNearestPoints(Position node, float x, float y){
+  if(node == NULL){
+    return NULL;
   }
 
-  int width = point->end.x - point->start.x;
-  int height = point->end.y - point->start.y;
+  int width = node->end.x - node->start.x;
+  int height = node->end.y - node->start.y;
   int i = 0;
   
-  if(point->divided == 1){
+  if(node->divided == 1){
     if(x < width / 2){
       if(y < width / 2)
-        findPoint(point->third, x, y);
+        return findNearestPoints(node->third, x, y);
       else
-        findPoint(point->second, x, y); 
+        return findNearestPoints(node->second, x, y); 
     }
     else{
       if(y < width / 2)
-        findPoint(point->fourth, x, y);
+        return findNearestPoints(node->fourth, x, y);
       else
-        findPoint(point->first, x, y);
+        return findNearestPoints(node->first, x, y);
     }
   }
 
   else{
-    printf("\nNajblize tocke su:\n");
-    for(i = 0; i < point->counter; i++){
-      if(point->points[i].x == x && point->points[i].y == y)
-        continue;
-      else
-        printf("%.0f %.0f\n", point->points[i].x, point->points[i].y);
+    for(i = 0; i < node->counter; i++){
+      if(node->points[i].x == x && node->points[i].y == y)
+        return node;
     }
+  }
+
+  return NULL;
+}
+
+//Calculates distance between 2 points
+float distanceBetweenPoints(Point a, Point b){
+  return sqrt(pow(a.x-b.x, 2) + pow(a.y-b.y, 2));
+}
+
+//Check for collision of 2 objects
+int checkCollisions(Position node, float x, float y){
+  if(node == NULL)
+    return 1;
+
+  Point temp; temp.x = x; temp.y = y;
+  int i = 0;
+
+  for(i = 0; i < node->counter; i++){
+    if(distanceBetweenPoints(temp, node->points[i]) <= (temp.radius + node->points[i].radius) && distanceBetweenPoints(temp, node->points[i]) != 0)
+      printf("%.0f %0.f is in collision with %.0f %0.f\n", temp.x, temp.y, node->points[i].x, node->points[i].y);
   }
 
   return 0;
 }
-
